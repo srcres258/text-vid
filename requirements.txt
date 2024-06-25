@@ -1,0 +1,8 @@
+argparse==1.4.0
+edge-tts==6.1.12
+loguru==0.7.2
+typing==3.7.4.3
+opencv-python==4.10.0.84
+numpy==2.0.0
+pillow==10.3.0
+tqdm==4.66.4
