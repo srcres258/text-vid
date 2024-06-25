@@ -41,7 +41,7 @@ class VideoGenerator:
             subtitle_text_units: list[TextUnit],
             font_path: str,
             font_size: int,
-            pause_duration_per_subtitle: float = 0.5
+            pause_duration_per_unit: float = 0.25
     ):
         """
         Initialize a VideoGenerator object.
@@ -53,7 +53,7 @@ class VideoGenerator:
          displayed in the video.
         :param font_path: Path of the font file to be used.
         :param font_size: Size of the font to be displayed in the video.
-        :param pause_duration_per_subtitle: Pause duration between
+        :param pause_duration_per_unit: Pause duration between
          every subtitle (in seconds).
         """
 
@@ -64,7 +64,7 @@ class VideoGenerator:
         self.subtitle_text_units = subtitle_text_units
         self.font_path = font_path
         self.font_size = font_size
-        self.pause_duration_per_subtitle = pause_duration_per_subtitle
+        self.pause_duration_per_unit = pause_duration_per_unit
 
         self.font = ImageFont.truetype(font_path, font_size)
         self.frame_span_subtitles: list[FrameSpanSubtitle] = []
@@ -86,25 +86,30 @@ class VideoGenerator:
             self.fps,
             size
         )
-        frame_count = self.calc_total_frames()
 
         try:
+            frame_count = self.calc_total_frames()
+            fss_iter = iter(self.frame_span_subtitles)
+            cur_fss = next(fss_iter)
+
             for cur_frame in tqdm(range(frame_count)):
-                # Create blank image
-                image = Image.new("RGB", size, (0, 0, 0))
-                draw = ImageDraw.Draw(image)
+                # Create an empty frame as the background.
+                image = self.cv_generate_empty_frame()
+                # If subtitle exists and should be displayed,
+                # generate the subtitle frame and add it onto the background.
+                if cur_fss and cur_frame >= cur_fss.start_frame:
+                    fss_frame = self.cv_generate_subtitle_text_frame(cur_fss.subtitle.text)
+                    image = cv2.add(image, fss_frame)
 
-                # Draw text on image
-                text = "第{}帧".format(cur_frame)
-                _, _, text_width, text_height = draw.textbbox((0, 0), text=text, font=self.font)
-                x = (image.width - text_width) / 2
-                # y = (image.height - text_height) / 2
-                y = image.height - text_height - BOTTOM_DISTANCE
-                draw.text((x, y), text, font=self.font, fill=(255, 255, 255))
+                    if cur_frame >= cur_fss.end_frame:
+                        try:
+                            cur_fss = next(fss_iter)
+                        except StopIteration:
+                            cur_fss = None
 
-                # Convert PIL image into OpenCV image
-                opencv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-                vw.write(opencv_image)
+                # Write the current frame to the writer.
+                vw.write(image)
+
         except:
             return False
         finally:
@@ -121,8 +126,16 @@ class VideoGenerator:
 
         for unit in self.subtitle_text_units:
             if len(unit.subtitles) > 0:
-                for subtitle in unit.subtitles:
-                    pass # TODO
+                for i, subtitle in enumerate(unit.subtitles):
+                    start_frame = cur_unit_start_frame + self.raw_duration_to_frames(subtitle.start)
+                    end_frame = start_frame + self.raw_duration_to_frames(subtitle.duration)
+                    fss = FrameSpanSubtitle(subtitle, start_frame, end_frame)
+                    self.frame_span_subtitles.append(fss)
+
+                    if i == len(unit.subtitles) - 1:
+                        cur_unit_start_frame = end_frame
+
+            cur_unit_start_frame += self.duration_to_frames(self.pause_duration_per_unit)
 
     def calc_total_duration(self) -> float:
         """
@@ -138,7 +151,7 @@ class VideoGenerator:
                 start_dur = Duration(last_subtitle.start)
                 duration_dur = Duration(last_subtitle.duration)
                 dur = start_dur.seconds_in_total() + duration_dur.seconds_in_total()
-                dur += self.pause_duration_per_subtitle
+                dur += self.pause_duration_per_unit
                 result += dur
 
         return result
@@ -169,3 +182,43 @@ class VideoGenerator:
 
         dur = Duration(raw_duration)
         return self.duration_to_frames(dur.seconds_in_total())
+
+    def cv_generate_empty_frame(self) -> cv2.typing.MatLike:
+        """
+        Generate an empty OpenCV image frame.
+        :return: The empty OpenCV image frame.
+        """
+
+        size = (self.width, self.height)
+
+        # Create blank image
+        image = Image.new("RGB", size, (0, 0, 0))
+        # Convert PIL image into OpenCV image
+        opencv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+
+        return opencv_image
+
+    def cv_generate_subtitle_text_frame(self, text: str) -> cv2.typing.MatLike:
+        """
+        Generate an OpenCV image containing a subtitle with the text given.
+        :param text: The text string used to generate the subtitle.
+        :return: The OpenCV image frame.
+        """
+
+        size = (self.width, self.height)
+
+        # Create blank image
+        image = Image.new("RGB", size, (0, 0, 0))
+        draw = ImageDraw.Draw(image)
+
+        # Draw text on image
+        _, _, text_width, text_height = draw.textbbox((0, 0), text=text, font=self.font)
+        x = (image.width - text_width) / 2
+        # y = (image.height - text_height) / 2
+        y = image.height - text_height - BOTTOM_DISTANCE
+        draw.text((x, y), text, font=self.font, fill=(255, 255, 255))
+
+        # Convert PIL image into OpenCV image
+        opencv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+
+        return opencv_image

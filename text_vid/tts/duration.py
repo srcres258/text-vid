@@ -19,4 +19,4 @@ class Duration:
         :return: The total number of seconds in this duration.
         """
 
-        return self.hours * 3600 + self.minutes * 60 + self.seconds
+        return self.raw_duration / 10 ** 7

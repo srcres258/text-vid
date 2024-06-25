@@ -5,6 +5,7 @@ from loguru import logger
 from text_vid.passage import Passage
 from text_vid import tts
 from text_vid.tts import TextUnit
+from text_vid.tts.audio_generator import AudioGenerator
 from text_vid.video.video_generator import VideoGenerator
 
 
@@ -33,6 +34,7 @@ class App:
 
         self.passage: Passage = None
         self.tts_processor: tts.Processor = None
+        self.audio_generator: AudioGenerator = None
         self.video_generator: VideoGenerator = None
 
     def run(self):
@@ -54,6 +56,10 @@ class App:
         # Then process the text.
         logger.info("Processing passage TTS...")
         self.__process_text()
+
+        # Then generate the audio.
+        logger.info("Generating audio...")
+        self.__generate_audio()
 
         # Then generate the video.
         logger.info("Generating video...")
@@ -88,18 +94,15 @@ class App:
             self.tts_processor.process(unit)
             logger.info("Making subtitles...")
             unit.make_subtitles()
-            logger.info(f"Done. Found {len(unit.subtitles)} subtitles.")
+            logger.info(f"Done. Found {len(unit.subtitles)} subtitle(s).")
             self.passage.content_units.append(unit)
 
+    def __generate_audio(self):
+        self.audio_generator = AudioGenerator(self.passage.content_units, os.path.join(self.tmp_dir_path, "audio.mp3"))
+        self.audio_generator.generate()
+
     def __generate_video(self):
-        self.video_generator = VideoGenerator(
-            self.output_path,
-            60.0,
-            1920,
-            1080,
-            self.passage.content_units,
-            self.font_path,
-            48
-        )
+        self.video_generator = VideoGenerator(self.output_path, 60.0, 1920, 1080, self.passage.content_units,
+                                              self.font_path, 48)
         self.video_generator.generate_frame_span_subtitles()
         self.video_generator.generate()
