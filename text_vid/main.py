@@ -19,6 +19,9 @@ def main():
     parser.add_argument("-o", "--output", type=str,
                         required=True,
                         help='Path of the output file.')
+    parser.add_argument("--font", type=str,
+                        required=True,
+                        help='Path of the font file to be used in video rendering.')
     parser.add_argument("--tmp-dir", type=str,
                         required=False, default=DEFAULT_TMP_DIR_PATH,
                         help='Path of the temporary directory.')
@@ -36,6 +39,7 @@ def main():
     text_path = args.text
     output_path = args.output
     tmp_dir_path = args.tmp_dir
+    font_path = args.font
     rate = args.rate
     volume = args.volume
     pitch = args.pitch
@@ -46,6 +50,6 @@ def main():
         os.makedirs(tmp_dir_path)
 
     # Initialise and run the application.
-    app = App(text_path, output_path, tmp_dir_path, rate, volume, pitch)
+    app = App(text_path, output_path, tmp_dir_path, font_path, rate, volume, pitch)
     logger.info("Launching application...")
     app.run()
