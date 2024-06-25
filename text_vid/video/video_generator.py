@@ -1,9 +1,12 @@
 import math
+import os
+import random
 
 import cv2
 import numpy as np
 from PIL import ImageFont, ImageDraw, Image
 from tqdm import tqdm
+from loguru import logger
 
 from text_vid.tts import TextUnit
 from text_vid.tts.duration import Duration
@@ -41,6 +44,7 @@ class VideoGenerator:
             subtitle_text_units: list[TextUnit],
             font_path: str,
             font_size: int,
+            bg_video_path: str,
             pause_duration_per_unit: float = 0.25
     ):
         """
@@ -64,10 +68,16 @@ class VideoGenerator:
         self.subtitle_text_units = subtitle_text_units
         self.font_path = font_path
         self.font_size = font_size
+        self.bg_video_path = bg_video_path
         self.pause_duration_per_unit = pause_duration_per_unit
 
         self.font = ImageFont.truetype(font_path, font_size)
         self.frame_span_subtitles: list[FrameSpanSubtitle] = []
+        self.bg_video_files: list[str] = []
+
+        dir_list = os.listdir(bg_video_path)
+        for file in dir_list:
+            self.bg_video_files.append(os.path.join(bg_video_path, file))
 
     def generate(self) -> bool:
         """
@@ -78,6 +88,10 @@ class VideoGenerator:
 
         if len(self.frame_span_subtitles) == 0:
             self.generate_frame_span_subtitles()
+
+        bg_vc = self.cv_open_random_bg_video_capture()
+        if not bg_vc.isOpened():
+            return False
 
         size = (self.width, self.height)
         vw = cv2.VideoWriter(
@@ -93,8 +107,16 @@ class VideoGenerator:
             cur_fss = next(fss_iter)
 
             for cur_frame in tqdm(range(frame_count)):
-                # Create an empty frame as the background.
-                image = self.cv_generate_empty_frame()
+                # Read a frame from the video capture.
+                ret, image = bg_vc.read()
+                if (not ret) or (image is None):
+                    # If the current video capture is ended, open a new one.
+                    bg_vc = self.cv_open_random_bg_video_capture()
+                    # Then read again.
+                    ret, image = bg_vc.read()
+                # Resize it to the current size.
+                image = cv2.resize(image, dsize=size)
+
                 # If subtitle exists and should be displayed,
                 # generate the subtitle frame and add it onto the background.
                 if cur_fss and cur_frame >= cur_fss.start_frame:
@@ -113,6 +135,7 @@ class VideoGenerator:
         except:
             return False
         finally:
+            bg_vc.release()
             vw.release()
 
         return True
@@ -222,3 +245,14 @@ class VideoGenerator:
         opencv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
         return opencv_image
+
+    def cv_open_random_bg_video_capture(self):
+        """
+        Open a random OpenCV video capture as the background of the video.
+        :return: The random OpenCV video capture
+        """
+
+        file = random.choice(self.bg_video_files)
+        logger.info(f"{file} is chosen as the background video.")
+
+        return cv2.VideoCapture(file)

@@ -16,6 +16,7 @@ class App:
             output_path: str,
             tmp_dir_path: str,
             font_path: str,
+            bg_video_path: str,
             rate: str = "+0%",
             volume: str = "+0%",
             pitch: str = "+0Hz"
@@ -28,6 +29,7 @@ class App:
         self.output_path = output_path
         self.tmp_dir_path = tmp_dir_path
         self.font_path = font_path
+        self.bg_video_path = bg_video_path
         self.rate = rate
         self.volume = volume
         self.pitch = pitch
@@ -103,6 +105,6 @@ class App:
 
     def __generate_video(self):
         self.video_generator = VideoGenerator(self.output_path, 60.0, 1920, 1080, self.passage.content_units,
-                                              self.font_path, 48)
+                                              self.font_path, 48, self.bg_video_path)
         self.video_generator.generate_frame_span_subtitles()
         self.video_generator.generate()
