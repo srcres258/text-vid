@@ -98,4 +98,5 @@ class App:
             "/usr/share/fonts/WindowsFonts/simhei.ttf",
             48
         )
+        self.video_generator.generate_frame_span_subtitles()
         self.video_generator.generate()

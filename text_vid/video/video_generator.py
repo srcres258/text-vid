@@ -76,6 +76,9 @@ class VideoGenerator:
          False if an error occurred.
         """
 
+        if len(self.frame_span_subtitles) == 0:
+            self.generate_frame_span_subtitles()
+
         size = (self.width, self.height)
         vw = cv2.VideoWriter(
             self.target_path,
@@ -114,7 +117,12 @@ class VideoGenerator:
         Generate the frame span subtitles for this video.
         """
 
-        #TODO
+        cur_unit_start_frame = 0
+
+        for unit in self.subtitle_text_units:
+            if len(unit.subtitles) > 0:
+                for subtitle in unit.subtitles:
+                    pass # TODO
 
     def calc_total_duration(self) -> float:
         """
@@ -141,5 +149,23 @@ class VideoGenerator:
         :return: Total number of frames in the video.
         """
 
-        dur = self.calc_total_duration()
-        return int(math.ceil(dur * self.fps))
+        return self.duration_to_frames(self.calc_total_duration())
+
+    def duration_to_frames(self, duration: float) -> int:
+        """
+        Converts duration in seconds to frames.
+        :param duration: Duration in seconds.
+        :return: Frames representing the duration.
+        """
+
+        return int(math.ceil(duration * self.fps))
+
+    def raw_duration_to_frames(self, raw_duration: float) -> int:
+        """
+        Converts raw duration in seconds to frames.
+        :param raw_duration: Raw duration in seconds.
+        :return: Frames representing the duration.
+        """
+
+        dur = Duration(raw_duration)
+        return self.duration_to_frames(dur.seconds_in_total())
