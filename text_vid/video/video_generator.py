@@ -120,15 +120,21 @@ class VideoGenerator:
                 # If subtitle exists and should be displayed,
                 # generate the subtitle frame and add it onto the background.
                 if cur_fss and cur_frame >= cur_fss.start_frame:
-                    fss_frame, fss_x, fss_y, fss_width, fss_height = (
+                    fss_frames, fss_x, fss_y, fss_width, fss_height = (
                         self.cv_generate_subtitle_text_frame(cur_fss.subtitle.text))
+                    # Do coordinate checks to avert drawing operations outside the frame.
+                    if fss_x + fss_width > self.width:
+                        fss_width = self.width - fss_x
+                    if fss_y + fss_height > self.height:
+                        fss_height = self.height - fss_y
 
                     # Dig a rectangle in the image to contain the subtitle.
                     image[fss_y:fss_y + fss_height, fss_x:fss_x + fss_width, 0] = 0  # B channel
                     image[fss_y:fss_y + fss_height, fss_x:fss_x + fss_width, 1] = 0  # G channel
                     image[fss_y:fss_y + fss_height, fss_x:fss_x + fss_width, 2] = 0  # R channel
                     # Then add the subtitle into the image.
-                    image = cv2.add(image, fss_frame)
+                    for fss_frame in fss_frames:
+                        image = cv2.add(image, fss_frame)
 
                     if cur_frame >= cur_fss.end_frame:
                         try:
@@ -231,11 +237,65 @@ class VideoGenerator:
 
     def cv_generate_subtitle_text_frame(
             self,
-            text: str
+            text: str,
+            y_offset: int = 0,
+            max_chars_per_line: int = 30
+    ) -> tuple[list[cv2.typing.MatLike], int, int, int, int]:
+        """
+        Generate an OpenCV image containing a subtitle with the text given.
+
+        If the text is too long to fit the video size, automatic line-breaking will
+        be used to make it well-displayed in the video.
+
+        :param text: The text string used to generate the subtitle.
+        :param y_offset: Offset value of y coordinate when drawing the subtitle.
+        :param max_chars_per_line: The maximum number of characters allowed per line
+        for automatic line-breaking.
+        :return: The OpenCV image frame; x, y, width and height of the subtitle text.
+        """
+
+        lines = []
+        for i in range(0, len(text), max_chars_per_line):
+            end = i + max_chars_per_line
+            if end > len(text):
+                end = len(text)
+            lines.append(text[i:end])
+
+        x = None
+        y = None
+        width = 0
+        height = 0
+        results = []
+
+        for line in lines:
+            opencv_image, cur_x, cur_y, cur_width, cur_height = (
+                self.cv_generate_subtitle_text_frame_single(line, y_offset=height + y_offset))
+
+            if x is None or y is None:
+                x = cur_x
+                y = cur_y
+            if cur_width > width:
+                width = cur_width
+                x = cur_x
+            height += cur_height
+
+            results.append(opencv_image)
+
+        return results, x, y, width, height
+
+    def cv_generate_subtitle_text_frame_single(
+            self,
+            text: str,
+            y_offset: int = 0
     ) -> tuple[cv2.typing.MatLike, int, int, int, int]:
         """
         Generate an OpenCV image containing a subtitle with the text given.
+
+        Note that automatic line-breaking will not be performed even if the text is
+        too long to fit in the video within this method.
+
         :param text: The text string used to generate the subtitle.
+        :param y_offset: Offset value of y coordinate when drawing the subtitle.
         :return: The OpenCV image frame; x, y, width and height of the subtitle text.
         """
 
@@ -249,7 +309,7 @@ class VideoGenerator:
         _, _, text_width, text_height = draw.textbbox((0, 0), text=text, font=self.font)
         x = int((image.width - text_width) / 2)
         # y = (image.height - text_height) / 2
-        y = image.height - text_height - BOTTOM_DISTANCE
+        y = image.height - text_height - BOTTOM_DISTANCE + y_offset
         draw.text((x, y), text, font=self.font, fill=(255, 255, 255))
 
         # Convert PIL image into OpenCV image
