@@ -124,9 +124,9 @@ class VideoGenerator:
                         self.cv_generate_subtitle_text_frame(cur_fss.subtitle.text))
 
                     # Dig a rectangle in the image to contain the subtitle.
-                    image[fss_y:fss_y + fss_height, fss_x:fss_x + fss_width, 0] = 0 # B channel
-                    image[fss_y:fss_y + fss_height, fss_x:fss_x + fss_width, 1] = 0 # G channel
-                    image[fss_y:fss_y + fss_height, fss_x:fss_x + fss_width, 2] = 0 # R channel
+                    image[fss_y:fss_y + fss_height, fss_x:fss_x + fss_width, 0] = 0  # B channel
+                    image[fss_y:fss_y + fss_height, fss_x:fss_x + fss_width, 1] = 0  # G channel
+                    image[fss_y:fss_y + fss_height, fss_x:fss_x + fss_width, 2] = 0  # R channel
                     # Then add the subtitle into the image.
                     image = cv2.add(image, fss_frame)
 
@@ -138,8 +138,7 @@ class VideoGenerator:
 
                 # Write the current frame to the writer.
                 vw.write(image)
-
-        except:
+        except BaseException:
             return False
         finally:
             bg_vc.release()
