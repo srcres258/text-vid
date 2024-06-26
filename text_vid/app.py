@@ -104,7 +104,7 @@ class App:
         self.audio_generator.generate()
 
     def __generate_video(self):
-        self.video_generator = VideoGenerator(self.output_path, 60.0, 1920, 1080, self.passage.content_units,
-                                              self.font_path, 48, self.bg_video_path)
+        self.video_generator = VideoGenerator(self.output_path, 30.0, 1280, 720, self.passage.content_units,
+                                              self.font_path, 32, self.bg_video_path)
         self.video_generator.generate_frame_span_subtitles()
         self.video_generator.generate()
