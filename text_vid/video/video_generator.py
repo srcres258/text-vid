@@ -154,18 +154,17 @@ class VideoGenerator:
 
         cur_unit_start_frame = 0
 
-        for unit in self.subtitle_text_units:
+        for i, unit in enumerate(self.subtitle_text_units):
             if len(unit.subtitles) > 0:
-                for i, subtitle in enumerate(unit.subtitles):
+                for subtitle in unit.subtitles:
                     start_frame = cur_unit_start_frame + self.raw_duration_to_frames(subtitle.start)
                     end_frame = start_frame + self.raw_duration_to_frames(subtitle.duration)
                     fss = FrameSpanSubtitle(subtitle, start_frame, end_frame)
                     self.frame_span_subtitles.append(fss)
 
-                    if i == len(unit.subtitles) - 1:
-                        cur_unit_start_frame = end_frame
-
-            cur_unit_start_frame += self.duration_to_frames(self.pause_duration_per_unit)
+            cur_unit_start_frame += self.duration_to_frames(unit.get_audio_duration())
+            if i < len(self.subtitle_text_units) - 1:
+                cur_unit_start_frame += self.duration_to_frames(self.pause_duration_per_unit)
 
     def calc_total_duration(self) -> float:
         """
@@ -175,14 +174,10 @@ class VideoGenerator:
 
         result = 0.0
 
-        for unit in self.subtitle_text_units:
-            if len(unit.subtitles) > 0:
-                last_subtitle = unit.subtitles[-1]
-                start_dur = Duration(last_subtitle.start)
-                duration_dur = Duration(last_subtitle.duration)
-                dur = start_dur.seconds_in_total() + duration_dur.seconds_in_total()
-                dur += self.pause_duration_per_unit
-                result += dur
+        for i, unit in enumerate(self.subtitle_text_units):
+            result += unit.get_audio_duration()
+            if i < len(self.subtitle_text_units) - 1:
+                result += self.pause_duration_per_unit
 
         return result
 
@@ -192,16 +187,14 @@ class VideoGenerator:
         :return: Total number of frames in the video.
         """
 
-        cur_unit_start_frame = 0
+        result = 0
 
-        for unit in self.subtitle_text_units:
-            if len(unit.subtitles) > 0:
-                last_subtitle = unit.subtitles[-1]
-                cur_unit_start_frame += (self.raw_duration_to_frames(last_subtitle.start)
-                                         + self.raw_duration_to_frames(last_subtitle.duration))
-            cur_unit_start_frame += self.duration_to_frames(self.pause_duration_per_unit)
+        for i, unit in enumerate(self.subtitle_text_units):
+            result += self.duration_to_frames(unit.get_audio_duration())
+            if i < len(self.subtitle_text_units) - 1:
+                result += self.duration_to_frames(self.pause_duration_per_unit)
 
-        return cur_unit_start_frame
+        return result
 
     def duration_to_frames(self, duration: float) -> int:
         """

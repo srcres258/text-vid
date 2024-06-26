@@ -1,3 +1,5 @@
+import eyed3
+
 from typing import Optional
 
 
@@ -117,3 +119,15 @@ class TextUnit:
             else:
                 break
         return result
+
+    def get_audio_duration(self) -> float:
+        """
+        Get the audio duration of this text unit (in seconds).
+        :return: The audio duration of this text unit (in seconds).
+        """
+
+        if self.audio_file_path is None:
+            return 0.0
+
+        mp3_info = eyed3.load(self.audio_file_path)
+        return mp3_info.info.time_secs
