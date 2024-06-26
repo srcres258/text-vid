@@ -4,7 +4,7 @@ from typing import Optional
 
 
 SUBTITLE_SPLITING_CHARS = [*list("，。！？；：?,!:;")]
-PUNCTRATION_MARKS = list("，。！？；：?,!:;.、—（）【】《》“”‘’\"'<>[](){}~")
+PUNCTRATION_MARKS = list("，。！？；：?,!:;、—…（）【】《》“”‘’\"'<>[](){}~")
 
 
 class TextTimestamp:
