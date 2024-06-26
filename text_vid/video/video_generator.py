@@ -192,7 +192,16 @@ class VideoGenerator:
         :return: Total number of frames in the video.
         """
 
-        return self.duration_to_frames(self.calc_total_duration())
+        cur_unit_start_frame = 0
+
+        for unit in self.subtitle_text_units:
+            if len(unit.subtitles) > 0:
+                last_subtitle = unit.subtitles[-1]
+                cur_unit_start_frame += (self.raw_duration_to_frames(last_subtitle.start)
+                                         + self.raw_duration_to_frames(last_subtitle.duration))
+            cur_unit_start_frame += self.duration_to_frames(self.pause_duration_per_unit)
+
+        return cur_unit_start_frame
 
     def duration_to_frames(self, duration: float) -> int:
         """
