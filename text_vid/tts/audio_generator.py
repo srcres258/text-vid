@@ -32,13 +32,14 @@ class AudioGenerator:
         audios = []
 
         logger.info("Generating audios...")
-        for unit in tqdm(self.text_units):
+        for i, unit in tqdm(enumerate(self.text_units)):
             audio = AudioSegment.from_mp3(unit.audio_file_path)
             silence_duration = int(self.pause_duration_per_unit * 1000.)
             silence = AudioSegment.silent(duration=silence_duration)
 
             audios.append(audio)
-            audios.append(silence)
+            if i < len(self.text_units) - 1:
+                audios.append(silence)
 
         logger.info("Merging audios...")
         output = audios[0]
