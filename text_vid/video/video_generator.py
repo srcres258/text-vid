@@ -120,7 +120,14 @@ class VideoGenerator:
                 # If subtitle exists and should be displayed,
                 # generate the subtitle frame and add it onto the background.
                 if cur_fss and cur_frame >= cur_fss.start_frame:
-                    fss_frame = self.cv_generate_subtitle_text_frame(cur_fss.subtitle.text)
+                    fss_frame, fss_x, fss_y, fss_width, fss_height = (
+                        self.cv_generate_subtitle_text_frame(cur_fss.subtitle.text))
+
+                    # Dig a rectangle in the image to contain the subtitle.
+                    image[fss_y:fss_y + fss_height, fss_x:fss_x + fss_width, 0] = 0 # B channel
+                    image[fss_y:fss_y + fss_height, fss_x:fss_x + fss_width, 1] = 0 # G channel
+                    image[fss_y:fss_y + fss_height, fss_x:fss_x + fss_width, 2] = 0 # R channel
+                    # Then add the subtitle into the image.
                     image = cv2.add(image, fss_frame)
 
                     if cur_frame >= cur_fss.end_frame:
@@ -221,11 +228,14 @@ class VideoGenerator:
 
         return opencv_image
 
-    def cv_generate_subtitle_text_frame(self, text: str) -> cv2.typing.MatLike:
+    def cv_generate_subtitle_text_frame(
+            self,
+            text: str
+    ) -> tuple[cv2.typing.MatLike, int, int, int, int]:
         """
         Generate an OpenCV image containing a subtitle with the text given.
         :param text: The text string used to generate the subtitle.
-        :return: The OpenCV image frame.
+        :return: The OpenCV image frame; x, y, width and height of the subtitle text.
         """
 
         size = (self.width, self.height)
@@ -236,7 +246,7 @@ class VideoGenerator:
 
         # Draw text on image
         _, _, text_width, text_height = draw.textbbox((0, 0), text=text, font=self.font)
-        x = (image.width - text_width) / 2
+        x = int((image.width - text_width) / 2)
         # y = (image.height - text_height) / 2
         y = image.height - text_height - BOTTOM_DISTANCE
         draw.text((x, y), text, font=self.font, fill=(255, 255, 255))
@@ -244,7 +254,7 @@ class VideoGenerator:
         # Convert PIL image into OpenCV image
         opencv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
-        return opencv_image
+        return opencv_image, x, y, text_width, text_height
 
     def cv_open_random_bg_video_capture(self):
         """
