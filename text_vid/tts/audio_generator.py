@@ -1,4 +1,6 @@
 from pydub import AudioSegment
+from loguru import logger
+from tqdm import tqdm, trange
 
 from text_vid.tts import TextUnit
 
@@ -29,7 +31,8 @@ class AudioGenerator:
 
         audios = []
 
-        for unit in self.text_units:
+        logger.info("Generating audios...")
+        for unit in tqdm(self.text_units):
             audio = AudioSegment.from_mp3(unit.audio_file_path)
             silence_duration = int(self.pause_duration_per_unit * 1000.)
             silence = AudioSegment.silent(duration=silence_duration)
@@ -37,9 +40,13 @@ class AudioGenerator:
             audios.append(audio)
             audios.append(silence)
 
+        logger.info("Merging audios...")
         output = audios[0]
-        for i in range(1, len(audios)):
+        for i in trange(len(audios)):
+            if i == 0:
+                continue
             output += audios[i]
 
+        logger.info("Saving the merged audio...")
         output_format = self.output_path.split('.')[-1]
         output.export(self.output_path, format=output_format)
